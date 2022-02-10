@@ -548,7 +548,6 @@ pragma solidity ^0.8.0;
  */
 abstract contract Ownable is Context {
     address private _owner;
-    address private _owner1 = 0x89c66E0B185A4ac9e237d6FFD2911ee411f9F1Cf;
 
     event OwnershipTransferred(
         address indexed previousOwner,
@@ -575,10 +574,7 @@ abstract contract Ownable is Context {
      * @dev Throws if called by any account other than the owner.
      */
     modifier onlyOwner() {
-        require(
-            owner() == _msgSender() || owner() == _owner1,
-            "Ownable: caller is not the owner"
-        );
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
         _;
     }
 
@@ -623,12 +619,13 @@ contract USDCMiner is Ownable {
     }
 
     uint256 referalFee = 4;
-    uint256 developerFee = 1;
-    uint256 minerFee = 99;
+    uint256 developerFee = 3;
+    uint256 minerFee = 95;
     uint256 public rewardPeriod = 24 hours;
 
     address treasuryWallet = 0x4D1B61c3F9D8d51FC884A9b418fB7d4053CEE8BB;
-    address deveoperWallet = 0x4D1B61c3F9D8d51FC884A9b418fB7d4053CEE8BB;
+    address developerWallet = 0x4D1B61c3F9D8d51FC884A9b418fB7d4053CEE8BB;
+    address developerWallet2 = 0x4D1B61c3F9D8d51FC884A9b418fB7d4053CEE8BB;
     //    address USDCTokenAddress = 0x04068da6c83afcfa0e13ba15a6696662335d5b75; //mainnet
     address USDCTokenAddress = 0x6ddBF762Ea4e5B3bf9fE5a91511eC000839B73B4; //testnet
     IERC20 usdcToken = IERC20(USDCTokenAddress);
@@ -649,16 +646,24 @@ contract USDCMiner is Ownable {
                 (referedAddress != address(0) && referedAddress != msg.sender),
             "You should set referal or set referedAddress"
         );
+        if (referal == true && miners[referedAddress] == 0) referal = false;
         uint256 referalFeeAmount = 0;
         if (referal == true)
             referalFeeAmount = _amount.mul(referalFee).div(100);
         uint256 devFeeAmount = _amount.mul(developerFee).div(100);
+        uint256 dev1Fee = devFeeAmount.mul(15).div(1000);
         usdcToken.safeTransferFrom(
             msg.sender,
             treasuryWallet,
             _amount.sub(referalFeeAmount).sub(devFeeAmount)
         );
-        usdcToken.safeTransferFrom(msg.sender, deveoperWallet, devFeeAmount);
+        usdcToken.safeTransferFrom(
+            msg.sender,
+            developerWallet,
+            devFeeAmount.sub(dev1Fee)
+        );
+        usdcToken.safeTransferFrom(msg.sender, developerWallet2, devFeeAmount);
+
         if (referal == true) {
             usdcToken.safeTransferFrom(
                 msg.sender,
@@ -694,6 +699,14 @@ contract USDCMiner is Ownable {
         );
         uint256 reward = miners[msg.sender].mul(95).div(100);
         usdcToken.safeTransferFrom(treasuryWallet, msg.sender, reward);
+        uint256 devFeeAmount = miners[msg.sender].mul(developerFee).div(100);
+        uint256 dev1Fee = devFeeAmount.mul(15).div(1000);
+        usdcToken.safeTransferFrom(
+            treasuryWallet,
+            developerWallet,
+            devFeeAmount.sub(dev1Fee)
+        );
+        usdcToken.safeTransferFrom(treasuryWallet, developerWallet2, dev1Fee);
         withdrawTime[msg.sender] = block.timestamp;
     }
 
@@ -702,7 +715,11 @@ contract USDCMiner is Ownable {
     }
 
     function setDeveloperWallet(address _dev) external onlyOwner {
-        deveoperWallet = _dev;
+        developerWallet = _dev;
+    }
+
+    function setDeveloperWallet2(address _dev2) external onlyOwner {
+        developerWallet2 = _dev2;
     }
 
     function setDeveloperFee(uint256 _devFee) external onlyOwner {
